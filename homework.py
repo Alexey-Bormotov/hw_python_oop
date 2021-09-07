@@ -10,7 +10,7 @@ class Record:
         self.amount = amount
         self.comment = comment
         if date is None:
-            self.date = dt.datetime.now().date()
+            self.date = dt.date.today()
         if type(date) == str:
             self.date = dt.datetime.strptime(date, self.date_format).date()
 
@@ -18,7 +18,7 @@ class Record:
 class Calculator:
     """Родительский класс калькуляторов."""
     # Текущая дата
-    today = dt.datetime.now().date()
+    today = dt.date.today()
 
     def __init__(self, limit):
         self.limit = limit
@@ -31,42 +31,52 @@ class Calculator:
 
     def get_today_stats(self):
         """Подсчет статистики за сегодня."""
-        sum = 0
-        for record in self.records:
-            if record.date == self.today:
-                sum += record.amount
-        return sum
+        # Список со значениями (amount) за сегодня
+        today_amount_list = ([record.amount for record in self.records
+                             if record.date == self.today])
+        return sum(today_amount_list)
 
     def get_week_stats(self):
         """Подсчет статистики за последние 7 дней."""
         # Дата неделю назад
         week_ago = self.today - dt.timedelta(days=7)
-        sum = 0
-        for record in self.records:
-            if (record.date <= self.today) and (record.date > week_ago):
-                sum += record.amount
-        return sum
+        # Список со значениями (amount) за неделю
+        week_amount_list = ([record.amount for record in self.records
+                            if (week_ago < record.date <= self.today)])
+        return sum(week_amount_list)
 
 
 class CashCalculator(Calculator):
     """Калькулятор денег."""
-    # Курсы валют
-    USD_RATE = 72.72
-    EURO_RATE = 86.4
+    # Словарь для валют {Ключ: [Название, Курс]}
+    cur_dict = {
+        'rub': ['руб', 1],
+        'usd': ['USD', 72.72],
+        'eur': ['Euro', 86.4],
+    }
+    USD_RATE = cur_dict['usd'][1]  # без этих строк pytest ругается
+    EURO_RATE = cur_dict['eur'][1]  # без этих строк pytest ругается
 
     def get_today_cash_remained(self, currency):
         """Подсчет остатка средств на сегодня"""
         # Вычисляем остаток на сегодня
         diff = self.limit - self.get_today_stats()
-        # Словарь для валют
-        cur_dict = {
-            'rub': 'руб',
-            'usd': 'USD',
-            'eur': 'Euro'
-        }
-        selected_cur = cur_dict[currency]
 
-        # Преобразование валют
+        # Проверяем правильно ли указана валюта
+        if currency not in self.cur_dict:
+            return 'Валюта указана неверно.'
+
+        # Если денег нет - держимся
+        if diff == 0:
+            return 'Денег нет, держись'
+
+        # Выбираем нужное название для выбранной валюты
+        selected_cur = self.cur_dict[currency][0]
+
+        # Преобразуем значение по курсу согласно выбранной валюты
+        # diff /= self.cur_dict[currency][1] - такое вычисление курса
+        # pytest'у не нравится, оставил старое,
+        # т.к. пока не знаю как его победить
         if currency == 'usd':
             diff /= self.USD_RATE
         elif currency == 'eur':
@@ -78,8 +88,7 @@ class CashCalculator(Calculator):
         elif diff < 0:
             return (f'Денег нет, держись: '
                     f'твой долг - {abs(diff):.2f} {selected_cur}')
-        else:
-            return 'Денег нет, держись'
+# Flake8 теперь ругается здесь на отсутствие явного возврата
 
 
 class CaloriesCalculator(Calculator):
