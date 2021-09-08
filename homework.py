@@ -48,47 +48,41 @@ class Calculator:
 
 class CashCalculator(Calculator):
     """Калькулятор денег."""
-    # Словарь для валют {Ключ: [Название, Курс]}
-    cur_dict = {
-        'rub': ['руб', 1],
-        'usd': ['USD', 72.72],
-        'eur': ['Euro', 86.4],
-    }
-    USD_RATE = cur_dict['usd'][1]  # без этих строк pytest ругается
-    EURO_RATE = cur_dict['eur'][1]  # без этих строк pytest ругается
+    # Курсы валют
+    USD_RATE = 72.72
+    EURO_RATE = 86.4
 
     def get_today_cash_remained(self, currency):
         """Подсчет остатка средств на сегодня"""
+        # Словарь для валют {Ключ: (Название, Курс)}
+        cur_dict = {
+            'rub': ('руб', 1),
+            'usd': ('USD', self.USD_RATE),
+            'eur': ('Euro', self.EURO_RATE),
+        }
+
         # Вычисляем остаток на сегодня
         diff = self.limit - self.get_today_stats()
-
-        # Проверяем правильно ли указана валюта
-        if currency not in self.cur_dict:
-            return 'Валюта указана неверно.'
-
         # Если денег нет - держимся
         if diff == 0:
             return 'Денег нет, держись'
 
-        # Выбираем нужное название для выбранной валюты
-        selected_cur = self.cur_dict[currency][0]
+        # Проверяем правильно ли указана валюта
+        if currency not in cur_dict:
+            return 'Валюта указана неверно.'
+
+        # Получаем нужные данные из словаря для валюты
+        cur_name, cur_rate = cur_dict[currency]
 
         # Преобразуем значение по курсу согласно выбранной валюты
-        # diff /= self.cur_dict[currency][1] - такое вычисление курса
-        # pytest'у не нравится, оставил старое,
-        # т.к. пока не знаю как его победить
-        if currency == 'usd':
-            diff /= self.USD_RATE
-        elif currency == 'eur':
-            diff /= self.EURO_RATE
+        diff /= cur_rate
 
         # Определение результата по остатку
         if diff > 0:
-            return f'На сегодня осталось {diff:.2f} {selected_cur}'
-        elif diff < 0:
+            return f'На сегодня осталось {diff:.2f} {cur_name}'
+        else:
             return (f'Денег нет, держись: '
-                    f'твой долг - {abs(diff):.2f} {selected_cur}')
-# Flake8 теперь ругается здесь на отсутствие явного возврата
+                    f'твой долг - {abs(diff):.2f} {cur_name}')
 
 
 class CaloriesCalculator(Calculator):
